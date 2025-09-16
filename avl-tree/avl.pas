@@ -32,6 +32,7 @@ type
         function DRR(Node: TNode): TNode;
 
         function FindLeftmostRightChild(Node: TNode): TNode;
+        function FindRightmostLeftChild(Node: TNode): TNode;
         function IsLeaf(Node: TNode): Boolean;
 
         procedure Preorder(Node: TNode);
@@ -108,7 +109,7 @@ end;
 
 procedure TAVLTree.Delete(AValue: Integer; var tmp: TNode);
 var
-    leftmost: TNode;
+    replacementNode: TNode;
     tempValue: Integer;
     d, i, m: Integer;
 begin
@@ -138,23 +139,63 @@ begin
             // Caso 2: No es hoja, buscar el nodo más a la derecha del subárbol izquierdo
             if tmp.Left <> nil then
             begin
-                leftmost := FindLeftmostRightChild(tmp.Left);
-                
-                // Intercambiar valores
-                tempValue := tmp.Value;
-                tmp.Value := leftmost.Value;
-                leftmost.Value := tempValue;
-                
-                // Eliminar el nodo que ahora contiene el valor original
-                Delete(tempValue, tmp.Left);
+                replacementNode := FindRightmostLeftChild(tmp.Left);
+
+                // si el nodo no tiene hijo izquierdo, simplemente reemplazar
+                if replacementNode.Left = nil then
+                begin
+                    // Intercambiar valores
+                    tempValue := tmp.Value;
+                    tmp.Value := replacementNode.Value;
+                    replacementNode.Value := tempValue;
+                    
+                    // Eliminar el nodo que ahora contiene el valor original
+                    Delete(tempValue, tmp.Left);
+                end
+                // si tiene hijo izquierdo, se debe hacer ese intercambio también
+                else
+                begin
+                    // Intercambiar valores
+                    tempValue := tmp.Value;
+                    tmp.Value := replacementNode.Value;
+                    replacementNode.Value := tempValue;
+
+                    tempValue := replacementNode.Left.Value;
+                    replacementNode.Left.Value := replacementNode.Value;
+                    replacementNode.Value := tempValue;
+                    // Eliminar el nodo que ahora contiene el valor original
+                    Delete(AValue, replacementNode.Left);
+                end;
             end
             else
             begin
-                // Solo tiene hijo derecho
-                leftmost := tmp;
-                tmp := tmp.Right;
-                leftmost.Free;
-                Exit;
+                // Solo tiene hijo derecho, buscar el nodo más a la izquierda del subárbol derecho
+                replacementNode := FindLeftmostRightChild(tmp.Right);
+
+                if replacementNode.Right = nil then
+                begin
+                    // Intercambiar valores
+                    tempValue := tmp.Value;
+                    tmp.Value := replacementNode.Value;
+                    replacementNode.Value := tempValue;
+
+                    // Eliminar el nodo que ahora contiene el valor original
+                    Delete(AValue, tmp.Right);
+                end
+                else
+                begin
+                    // Intercambiar valores
+                    tempValue := tmp.Value;
+                    tmp.Value := replacementNode.Value;
+                    replacementNode.Value := tempValue;
+
+                    tempValue := replacementNode.Right.Value;
+                    replacementNode.Right.Value := replacementNode.Value;
+                    replacementNode.Value := tempValue;
+
+                    // Eliminar el nodo que ahora contiene el valor original
+                    Delete(AValue, replacementNode.Right);
+                end;
             end;
         end;
     end;
@@ -170,14 +211,14 @@ begin
         // Verificar balance y aplicar rotaciones si es necesario
         if (HeightOf(tmp.Left) - HeightOf(tmp.Right)) = 2 then
         begin
-            if HeightOf(tmp.Left.Left) >= HeightOf(tmp.Left.Right) then
+            if HeightOf(tmp.Left.Left) > HeightOf(tmp.Left.Right) then
                 tmp := SRR(tmp)
             else
                 tmp := DRR(tmp);
         end
         else if (HeightOf(tmp.Right) - HeightOf(tmp.Left)) = 2 then
         begin
-            if HeightOf(tmp.Right.Right) >= HeightOf(tmp.Right.Left) then
+            if HeightOf(tmp.Right.Right) > HeightOf(tmp.Right.Left) then
                 tmp := SRL(tmp)
             else
                 tmp := DRL(tmp);
@@ -185,16 +226,23 @@ begin
     end;
 end;
 
-function TAVLTree.FindLeftmostRightChild(Node: TNode): TNode;
+function TAVLTree.FindRightmostLeftChild(Node: TNode): TNode;
 begin
     Result := Node;
     while Result.Right <> nil do
         Result := Result.Right;
 end;
 
+function TAVLTree.FindLeftmostRightChild(Node: TNode): TNode;
+begin
+    Result := Node;
+    while Result.Left <> nil do
+        Result := Result.Left;
+end;
+
 function TAVLTree.IsLeaf(Node: TNode): Boolean;
 begin
-    Result := (Node <> nil) and (Node.Left = nil) and (Node.Right = nil);
+    Result := (Node <> nil) and (HeightOf(Node) = 0);
 end;
 
 
@@ -398,8 +446,22 @@ var
 begin
     AVL := TAVLTree.Create;
     try
-        AVL.Add(5); AVL.Add(10); AVL.Add(15); AVL.Add(20);
-        AVL.Add(25); AVL.Add(30); AVL.Add(35);
+        AVL.Add(5);
+        AVL.Add(100);
+        AVL.Add(41);
+        AVL.Add(13);
+        AVL.Add(15);
+        AVL.Add(67);
+        AVL.Add(46);
+        AVL.Add(11);
+        AVL.Add(55);
+        AVL.Add(21);
+        AVL.Add(29);
+        AVL.Add(83);
+        AVL.Add(71);
+        AVL.Add(22);
+        AVL.Add(3);
+        AVL.Add(110);
 
         Writeln('--- Árbol original ---');
         Write('Preorder: ');
@@ -417,23 +479,26 @@ begin
         AVL.GenDot();
 
         Writeln;
-        Writeln('--- Después de eliminar 10 ---');
-        AVL.Delete(10);
+        Writeln('--- Después de eliminar 41 ---');
+        AVL.Delete(41);
         Write('Inorder: ');
-        AVL.Inorder(AVL.Root); Writeln;
-
+        AVL.Preorder(AVL.Root); Writeln;
         AVL.GenDot();
 
         Writeln;
-        Writeln('--- Después de eliminar 20 ---');
-        AVL.Delete(20);
+        Writeln('--- Después de eliminar 46 ---');
+        AVL.Delete(46);
         Write('Inorder: ');
-        AVL.Inorder(AVL.Root); Writeln;
-
+        AVL.Preorder(AVL.Root); Writeln;
         AVL.GenDot();
+
+        AVL.Delete(5);
+        AVL.Delete(3);
+        AVL.Delete(11);
 
         Writeln;
         Write('DOT: ');
+        AVL.GenDot();
         Writeln;
 
         //Writeln('Altura: ', AVL.HeightOf(AVL.Root));
